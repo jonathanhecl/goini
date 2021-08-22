@@ -203,42 +203,44 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 			}
 		}
 	}
-	if sectionFound >= 0 {
-		if t.options.Debug {
-			fmt.Println("NEW KEY: ", section, "->", key, "=", value.Value)
-		}
-		newLine := _TLine{
-			Mode:    KEY,
-			Section: section,
-			Key:     key,
-			Value:   value.Value,
-			Line:    key + string(_KeyValueDiff) + value.Value,
-		}
-		tempLines := t.lines[:sectionFound]
-		tempLines = append(tempLines, newLine)
-		tempLines = append(tempLines, t.lines[sectionFound+1:]...)
-		(*t).lines = tempLines
-	} else {
-		if t.options.Debug {
-			fmt.Println("NEW SECTION: ", section, "->", key, "=", value.Value)
-		}
-		newLines := []_TLine{
-			{
-				Mode:    SECTION,
-				Section: section,
-				Line:    string(_Section[0]) + section + string(_Section[1]),
-			},
-			{
+	if len(value.Value) > 0 {
+		if sectionFound >= 0 {
+			if t.options.Debug {
+				fmt.Println("NEW KEY: ", section, "->", key, "=", value.Value)
+			}
+			newLine := _TLine{
 				Mode:    KEY,
 				Section: section,
 				Key:     key,
 				Value:   value.Value,
 				Line:    key + string(_KeyValueDiff) + value.Value,
-			},
+			}
+			tempLines := t.lines[:sectionFound]
+			tempLines = append(tempLines, newLine)
+			tempLines = append(tempLines, t.lines[sectionFound+1:]...)
+			(*t).lines = tempLines
+		} else {
+			if t.options.Debug {
+				fmt.Println("NEW SECTION: ", section, "->", key, "=", value.Value)
+			}
+			newLines := []_TLine{
+				{
+					Mode:    SECTION,
+					Section: section,
+					Line:    string(_Section[0]) + section + string(_Section[1]),
+				},
+				{
+					Mode:    KEY,
+					Section: section,
+					Key:     key,
+					Value:   value.Value,
+					Line:    key + string(_KeyValueDiff) + value.Value,
+				},
+			}
+			tempLines := t.lines
+			tempLines = append(tempLines, newLines...)
+			(*t).lines = tempLines
 		}
-		tempLines := t.lines
-		tempLines = append(tempLines, newLines...)
-		(*t).lines = tempLines
 	}
 }
 
