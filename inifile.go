@@ -36,7 +36,7 @@ type _TLine struct {
 
 var _Section []byte = []byte{91, 93}
 var _KeyValueDiff byte = byte(61)
-var _FlagComments []byte = []byte{35, 39, 47, 59, 96}
+var _FlagComments []byte = []byte{35, 39, 47, 96}
 var _IgnoredSpaces []byte = []byte{9, 10, 32}
 
 type TValue struct {
@@ -109,7 +109,6 @@ func (t *TINIFile) Save(Path string) error {
 		if runtime.GOOS == "windows" {
 			lineBreak = "\r\n"
 		}
-
 		for i := range t.lines {
 			if _, err := f.Write([]byte(t.lines[i].Line + lineBreak)); err != nil {
 				panic(err)
