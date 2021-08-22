@@ -193,7 +193,10 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 				}
 				tempKey := t.lines[i].Line[:strings.Index(t.lines[i].Line, key)+len(key+string(_KeyValueDiff))]
 				tempRest := t.lines[i].Line[len(tempKey):]
-				tempNonValue := tempRest[strings.Index(tempRest, t.lines[i].Value)+len(t.lines[i].Value):]
+				tempNonValue := ""
+				if strings.Index(tempRest, t.lines[i].Value)+len(t.lines[i].Value) > len(tempRest) {
+					tempNonValue = tempRest[strings.Index(tempRest, t.lines[i].Value)+len(t.lines[i].Value):]
+				}
 				t.lines[i].Value = value.Value
 				t.lines[i].Line = tempKey + value.Value + tempNonValue
 				return
