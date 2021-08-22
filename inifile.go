@@ -59,6 +59,18 @@ func (t *TINIFile) Options(o TOptions) {
 	(*t).options = o
 }
 
+func New() *TINIFile {
+	t := TINIFile{}
+	t.lines = []_TLine{}
+	t.Filename = ""
+	t.TotalLines = 0
+	t.options = TOptions{
+		Debug:         false,
+		CaseSensitive: false,
+	}
+	return &t
+}
+
 func Load(Path string) (*TINIFile, error) {
 	t := TINIFile{}
 	t.lines = []_TLine{}
