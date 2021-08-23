@@ -22,14 +22,11 @@ import (
 func main() {
 
     // Load an existent file
-	ini, _ := inifile.Load("./test.ini")
+	ini, _ := inifile.Load("./test.ini", nil)
     /*
         // New file
-        ini := inifile.New()
+        ini := inifile.New(&inifile.TOptions{CaseSensitive: false})
     */
-	ini.Options(inifile.TOptions{
-		CaseSensitive: false,
-	})
     // Read a key
 	value := ini.Get("section", "key").String())
     // Set a key

@@ -47,7 +47,7 @@ type TINIFile struct {
 	lines      []_TLine
 	Filename   string
 	TotalLines int
-	options    TOptions
+	options    *TOptions
 }
 
 type TOptions struct {
@@ -55,30 +55,36 @@ type TOptions struct {
 	CaseSensitive bool
 }
 
-func (t *TINIFile) Options(o TOptions) {
+func (t *TINIFile) Options(o *TOptions) {
 	(*t).options = o
 }
 
-func New() *TINIFile {
+func New(o *TOptions) *TINIFile {
 	t := TINIFile{}
 	t.lines = []_TLine{}
 	t.Filename = ""
 	t.TotalLines = 0
-	t.options = TOptions{
-		Debug:         false,
-		CaseSensitive: false,
+	t.options = o
+	if t.options == nil {
+		t.options = &TOptions{
+			CaseSensitive: false,
+			Debug:         false,
+		}
 	}
 	return &t
 }
 
-func Load(Path string) (*TINIFile, error) {
+func Load(Path string, o *TOptions) (*TINIFile, error) {
 	t := TINIFile{}
 	t.lines = []_TLine{}
 	t.Filename = Path
 	t.TotalLines = 0
-	t.options = TOptions{
-		Debug:         false,
-		CaseSensitive: false,
+	t.options = o
+	if t.options == nil {
+		t.options = &TOptions{
+			CaseSensitive: false,
+			Debug:         false,
+		}
 	}
 	if f, err := os.Open(t.Filename); err != nil {
 		return nil, err
@@ -89,9 +95,9 @@ func Load(Path string) (*TINIFile, error) {
 		for s.Scan() {
 			l := strings.TrimSpace(s.Text())
 			if lineNumber == 0 {
-				t.lines = append(t.lines, processLine(l, _TLine{}))
+				t.lines = append(t.lines, t.processLine(l, _TLine{}))
 			} else {
-				t.lines = append(t.lines, processLine(l, t.lines[lineNumber-1]))
+				t.lines = append(t.lines, t.processLine(l, t.lines[lineNumber-1]))
 			}
 			lineNumber++
 		}
@@ -120,61 +126,66 @@ func (t *TINIFile) Save(Path string) error {
 
 // Logic
 
-func processLine(s string, prevLine _TLine) _TLine {
+func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 	r := _TLine{
 		Mode: IGNORED,
-		Line: s,
+		Line: line,
 	}
 	ignoringBeginning := true
 	ignoringComment := false
 	capturingSection := false
 	capturingKey := false
 	capturingValue := false
-	tempReading := ""
-	for i := range s {
-		if ignoringBeginning && !bytes.Contains(_IgnoredSpaces, []byte{s[i]}) {
+	tempReading := []byte{}
+	for i := range line {
+		if ignoringBeginning && !bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) {
 			ignoringBeginning = false
 			capturingKey = true
 		}
 		if !ignoringBeginning {
-			if !ignoringComment && bytes.Contains(_FlagComments, []byte{s[i]}) {
+			if !ignoringComment && bytes.Contains(_FlagComments, []byte{byte(line[i])}) {
 				ignoringComment = true
 				capturingKey = false
 				break
 			}
-			if (capturingSection || capturingKey) && !capturingValue && bytes.Contains(_IgnoredSpaces, []byte{s[i]}) {
+			if (capturingSection || capturingKey) &&
+				!capturingValue && bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) {
 				capturingSection = false
 				capturingKey = false
 				break
 			}
-			if !capturingSection && _Section[0] == s[i] {
+			if !capturingSection && _Section[0] == byte(line[i]) {
 				capturingSection = true
 				capturingKey = false
 				continue
-			} else if capturingSection && _Section[1] == s[i] {
+			} else if capturingSection && _Section[1] == byte(line[i]) {
 				r.Mode = SECTION
-				r.Section = tempReading
+				r.Section = string(tempReading)
 				r.Key = ""
 				r.Value = ""
 				capturingSection = false
 				break
 			}
-			if capturingKey && _KeyValueDiff == s[i] {
+			if capturingKey && _KeyValueDiff == byte(line[i]) {
 				r.Mode = KEY
 				r.Section = prevLine.Section
-				r.Key = tempReading
+				r.Key = string(tempReading)
 				r.Value = ""
-				tempReading = ""
+				tempReading = []byte{}
 				capturingValue = true
 				continue
 			}
 			if !ignoringComment {
-				tempReading = tempReading + string(s[i])
+				tempReading = append(tempReading, byte(line[i]))
 				if capturingValue {
-					r.Value = strings.TrimSpace(tempReading)
+					r.Value = strings.TrimSpace(string(tempReading))
 				}
 			}
 		}
+	}
+	if t.options.Debug {
+		fmt.Println("Line analyzed: ", string(line))
+		fmt.Println("Line information: ", r)
 	}
 	return r
 }
