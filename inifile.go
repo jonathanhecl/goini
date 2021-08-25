@@ -36,11 +36,11 @@ type _TLine struct {
 
 var _Section []byte = []byte{91, 93}
 var _KeyValueDiff byte = byte(61)
-var _FlagComments []byte = []byte{35, 39, 47, 96}
+var _FlagComments []byte = []byte{35, 39, 47, 96} // 47 double
 var _IgnoredSpaces []byte = []byte{9, 10, 32}
 
 type TValue struct {
-	Value string
+	Value []byte
 }
 
 type TINIFile struct {
@@ -128,8 +128,9 @@ func (t *TINIFile) Save(Path string) error {
 
 func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 	r := _TLine{
-		Mode: IGNORED,
-		Line: line,
+		Mode:    IGNORED,
+		Section: prevLine.Section,
+		Line:    line,
 	}
 	ignoringBeginning := true
 	ignoringComment := false
@@ -144,9 +145,17 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 		}
 		if !ignoringBeginning {
 			if !ignoringComment && bytes.Contains(_FlagComments, []byte{byte(line[i])}) {
-				ignoringComment = true
-				capturingKey = false
-				break
+				isComment := true
+				if byte(line[i]) == 47 && len(line) > i { // 47 special
+					if byte(line[i+1]) != 47 {
+						isComment = false
+					}
+				}
+				if isComment {
+					ignoringComment = true
+					capturingKey = false
+					break
+				}
 			}
 			if (capturingSection || capturingKey) &&
 				!capturingValue && bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) {
@@ -199,16 +208,20 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 			if (!t.options.CaseSensitive && strings.EqualFold(t.lines[i].Key, key)) ||
 				(t.options.CaseSensitive && t.lines[i].Key == key) {
 				if t.options.Debug {
-					fmt.Println("EDIT VALUE: ", section, "->", key, "=", value.Value)
+					fmt.Println("EDIT VALUE: ", section, "->", key, "=", string(value.Value))
 				}
-				tempKey := t.lines[i].Line[:strings.Index(t.lines[i].Line, key)+len(key+string(_KeyValueDiff))]
-				tempRest := t.lines[i].Line[len(tempKey):]
-				tempNonValue := ""
-				if strings.Index(tempRest, t.lines[i].Value) > len(tempRest) {
-					tempNonValue = tempRest[strings.Index(tempRest, t.lines[i].Value)+len(t.lines[i].Value):]
+				key = t.lines[i].Key
+				tempKey := []byte(t.lines[i].Line[:strings.Index(t.lines[i].Line, key)+len(key+string(_KeyValueDiff))])
+				tempRest := []byte(t.lines[i].Line[len(tempKey):])
+				tempNonValue := []byte{}
+				if len(t.lines[i].Value) < len(tempRest) {
+					tempNonValue = tempRest[len(t.lines[i].Value)+len(t.lines[i].Key)+2:]
 				}
-				t.lines[i].Value = value.Value
-				t.lines[i].Line = tempKey + value.Value + tempNonValue
+				(*t).lines[i].Value = string(value.Value)
+				(*t).lines[i].Line = string(tempKey) + t.lines[i].Value + string(tempNonValue)
+				if t.options.Debug {
+					fmt.Println("SET RETURN: ", t.lines[i])
+				}
 				return
 			}
 		}
@@ -216,22 +229,22 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 	if len(value.Value) > 0 {
 		if sectionFound >= 0 {
 			if t.options.Debug {
-				fmt.Println("NEW KEY: ", section, "->", key, "=", value.Value)
+				fmt.Println("NEW KEY: ", section, "->", key, "=", string(value.Value))
 			}
 			newLine := _TLine{
 				Mode:    KEY,
 				Section: section,
 				Key:     key,
-				Value:   value.Value,
-				Line:    key + string(_KeyValueDiff) + value.Value,
+				Value:   string(value.Value),
+				Line:    key + string(_KeyValueDiff) + string(value.Value),
 			}
-			tempLines := t.lines[:sectionFound]
-			tempLines = append(tempLines, newLine)
-			tempLines = append(tempLines, t.lines[sectionFound+1:]...)
-			(*t).lines = tempLines
+			t.lines = append(t.lines, _TLine{})
+			copy(t.lines[sectionFound+1:], t.lines[sectionFound:])
+			t.lines[sectionFound+1] = newLine
+			(*t).lines = t.lines
 		} else {
 			if t.options.Debug {
-				fmt.Println("NEW SECTION: ", section, "->", key, "=", value.Value)
+				fmt.Println("NEW SECTION: ", section, "->", key, "=", string(value.Value))
 			}
 			newLines := []_TLine{
 				{
@@ -243,13 +256,12 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 					Mode:    KEY,
 					Section: section,
 					Key:     key,
-					Value:   value.Value,
-					Line:    key + string(_KeyValueDiff) + value.Value,
+					Value:   string(value.Value),
+					Line:    key + string(_KeyValueDiff) + string(value.Value),
 				},
 			}
-			tempLines := t.lines
-			tempLines = append(tempLines, newLines...)
-			(*t).lines = tempLines
+			t.lines = append(t.lines, newLines...)
+			(*t).lines = t.lines
 		}
 	}
 }
@@ -261,7 +273,7 @@ func (t *TINIFile) Get(section string, key string) TValue {
 			if (!t.options.CaseSensitive && strings.EqualFold(t.lines[i].Key, key)) ||
 				(t.options.CaseSensitive && t.lines[i].Key == key) {
 				return TValue{
-					Value: t.lines[i].Value,
+					Value: []byte(t.lines[i].Value),
 				}
 			}
 		}
@@ -272,11 +284,11 @@ func (t *TINIFile) Get(section string, key string) TValue {
 // Convertions
 
 func String(s string) TValue {
-	return TValue{Value: strings.TrimSpace(s)}
+	return TValue{Value: []byte(strings.TrimSpace(s))}
 }
 
 func (t TValue) String() string {
-	return t.Value
+	return string(t.Value)
 }
 
 func Bool(b bool, isInt bool) TValue {
@@ -292,13 +304,13 @@ func Bool(b bool, isInt bool) TValue {
 			s = "true"
 		}
 	}
-	return TValue{Value: s}
+	return TValue{Value: []byte(s)}
 }
 
 func (t TValue) Bool() bool {
 	b := false
-	if strings.EqualFold(t.Value, "true") ||
-		t.Value == "1" {
+	if strings.EqualFold(string(t.Value), "true") ||
+		string(t.Value) == "1" {
 		b = true
 	}
 	return b
@@ -306,70 +318,70 @@ func (t TValue) Bool() bool {
 
 func Int(i int) TValue {
 	s := strconv.Itoa(i)
-	return TValue{Value: s}
+	return TValue{Value: []byte(s)}
 }
 
 func (t TValue) Int() int {
-	i, _ := strconv.Atoi(t.Value)
+	i, _ := strconv.Atoi(string(t.Value))
 	return i
 }
 
 func Int8(i int8) TValue {
 	s := strconv.Itoa(int(i))
-	return TValue{Value: s}
+	return TValue{Value: []byte(s)}
 }
 
 func (t TValue) Int8() int8 {
-	i, _ := strconv.Atoi(t.Value)
+	i, _ := strconv.Atoi(string(t.Value))
 	return int8(i)
 }
 
 func Int16(i int16) TValue {
 	s := strconv.Itoa(int(i))
-	return TValue{Value: s}
+	return TValue{Value: []byte(s)}
 }
 
 func (t TValue) Int16() int16 {
-	i, _ := strconv.Atoi(t.Value)
+	i, _ := strconv.Atoi(string(t.Value))
 	return int16(i)
 }
 
 func Int32(i int32) TValue {
 	s := strconv.Itoa(int(i))
-	return TValue{Value: s}
+	return TValue{Value: []byte(s)}
 }
 
 func (t TValue) Int32() int32 {
-	i, _ := strconv.Atoi(t.Value)
+	i, _ := strconv.Atoi(string(t.Value))
 	return int32(i)
 }
 
 func Int64(i int64) TValue {
 	s := strconv.Itoa(int(i))
-	return TValue{Value: s}
+	return TValue{Value: []byte(s)}
 }
 
 func (t TValue) Int64() int64 {
-	i, _ := strconv.Atoi(t.Value)
+	i, _ := strconv.Atoi(string(t.Value))
 	return int64(i)
 }
 
 func Float64(i float64) TValue {
 	s := fmt.Sprint(i)
-	return TValue{Value: s}
+	return TValue{Value: []byte(s)}
 }
 
 func (t TValue) Float64() float64 {
-	i, _ := strconv.ParseFloat(t.Value, 64)
+	i, _ := strconv.ParseFloat(string(t.Value), 64)
 	return i
 }
 
 func Uint64(i uint64) TValue {
 	s := strconv.FormatUint(i, 10)
-	return TValue{Value: s}
+	return TValue{Value: []byte(s)}
 }
 
 func (t TValue) UInt64() uint64 {
-	i, _ := strconv.ParseUint(t.Value, 10, 64)
+	i, _ := strconv.ParseUint(string(t.Value), 10, 64)
 	return i
 }
