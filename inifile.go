@@ -204,7 +204,9 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 	for i := range t.lines {
 		if (!t.options.CaseSensitive && strings.EqualFold(t.lines[i].Section, section)) ||
 			(t.options.CaseSensitive && t.lines[i].Section == section) {
-			sectionFound = i
+			if t.lines[i].Mode == KEY || sectionFound == -1 {
+				sectionFound = i
+			}
 			if (!t.options.CaseSensitive && strings.EqualFold(t.lines[i].Key, key)) ||
 				(t.options.CaseSensitive && t.lines[i].Key == key) {
 				if t.options.Debug {
@@ -215,7 +217,7 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 				tempRest := []byte(t.lines[i].Line[len(tempKey):])
 				tempNonValue := []byte{}
 				if len(t.lines[i].Value) < len(tempRest) {
-					tempNonValue = tempRest[len(t.lines[i].Value)+len(t.lines[i].Key)+2:]
+					tempNonValue = tempRest[len(t.lines[i].Value)+1:]
 				}
 				(*t).lines[i].Value = string(value.Value)
 				(*t).lines[i].Line = string(tempKey) + t.lines[i].Value + string(tempNonValue)
