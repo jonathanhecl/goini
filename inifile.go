@@ -217,7 +217,8 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 				tempRest := []byte(t.lines[i].Line[len(tempKey):])
 				tempNonValue := []byte{}
 				if len(t.lines[i].Value) < len(tempRest) {
-					tempNonValue = tempRest[len(t.lines[i].Value)+1:]
+					tempNonValue = append([]byte{32}, tempRest[len(t.lines[i].Value)+1:]...)
+
 				}
 				(*t).lines[i].Value = string(value.Value)
 				(*t).lines[i].Line = string(tempKey) + t.lines[i].Value + string(tempNonValue)
