@@ -369,6 +369,16 @@ func (t TValue) Int64() int64 {
 	return int64(i)
 }
 
+func Float32(i float32) TValue {
+	s := fmt.Sprint(i)
+	return TValue{Value: []byte(s)}
+}
+
+func (t TValue) Float32() float32 {
+	i, _ := strconv.ParseFloat(string(t.Value), 32)
+	return float32(i)
+}
+
 func Float64(i float64) TValue {
 	s := fmt.Sprint(i)
 	return TValue{Value: []byte(s)}
