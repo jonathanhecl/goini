@@ -45,6 +45,7 @@ Types predesigned:
 * Int16
 * Int32
 * Uint64
+* Float32
 * Float64
 
 # All made on day 21 Agu 2021
