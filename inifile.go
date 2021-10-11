@@ -319,6 +319,16 @@ func (t TValue) Bool() bool {
 	return b
 }
 
+func Byte(i byte) TValue {
+	s := strconv.Itoa(int(i))
+	return TValue{Value: []byte(s)}
+}
+
+func (t TValue) Byte() byte {
+	i, _ := strconv.Atoi(string(t.Value))
+	return byte(i)
+}
+
 func Int(i int) TValue {
 	s := strconv.Itoa(i)
 	return TValue{Value: []byte(s)}

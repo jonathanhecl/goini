@@ -38,9 +38,10 @@ func main() {
 ```
 
 Types predesigned:
+* Byte
 * String
-* Int
 * Bool _(works with 1/0 and true/false)_
+* Int
 * Int8
 * Int16
 * Int32
