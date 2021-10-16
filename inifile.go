@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 /*
@@ -34,6 +35,12 @@ type _TLine struct {
 	Line    string
 }
 
+type _TSection struct {
+	Section string
+	Begin   int
+	End     int
+}
+
 var _Section []byte = []byte{91, 93}
 var _KeyValueDiff byte = byte(61)
 var _FlagComments []byte = []byte{35, 39, 47, 96} // 47 double
@@ -45,6 +52,7 @@ type TValue struct {
 
 type TINIFile struct {
 	lines      []_TLine
+	sections   []_TSection
 	Filename   string
 	TotalLines int
 	options    *TOptions
@@ -55,6 +63,8 @@ type TOptions struct {
 	CaseSensitive bool
 }
 
+var timeMark time.Time
+
 func (t *TINIFile) Options(o *TOptions) {
 	(*t).options = o
 }
@@ -62,6 +72,7 @@ func (t *TINIFile) Options(o *TOptions) {
 func New(o *TOptions) *TINIFile {
 	t := TINIFile{}
 	t.lines = []_TLine{}
+	t.sections = []_TSection{}
 	t.Filename = ""
 	t.TotalLines = 0
 	t.options = o
@@ -77,6 +88,7 @@ func New(o *TOptions) *TINIFile {
 func Load(Path string, o *TOptions) (*TINIFile, error) {
 	t := TINIFile{}
 	t.lines = []_TLine{}
+	t.sections = []_TSection{}
 	t.Filename = Path
 	t.TotalLines = 0
 	t.options = o
@@ -85,6 +97,9 @@ func Load(Path string, o *TOptions) (*TINIFile, error) {
 			CaseSensitive: false,
 			Debug:         false,
 		}
+	}
+	if t.options.Debug {
+		timeMark = time.Now()
 	}
 	if f, err := os.Open(t.Filename); err != nil {
 		return nil, err
@@ -102,6 +117,9 @@ func Load(Path string, o *TOptions) (*TINIFile, error) {
 			lineNumber++
 		}
 		t.TotalLines = lineNumber
+	}
+	if t.options.Debug {
+		fmt.Println("Loaded on ", time.Since(timeMark))
 	}
 	return &t, nil
 }
@@ -172,6 +190,22 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 				r.Section = string(tempReading)
 				r.Key = ""
 				r.Value = ""
+				//
+				sectionKey := string(tempReading)
+				if !t.options.CaseSensitive {
+					sectionKey = strings.ToUpper(sectionKey)
+				}
+				sec := t.getSection(sectionKey)
+				if sec == nil {
+					t.sections = append(t.sections, _TSection{
+						Section: sectionKey,
+						Begin:   len(t.lines) + 1,
+						End:     len(t.lines) + 1,
+					})
+				} else {
+					sec.End = len(t.lines) + 1
+				}
+				//
 				capturingSection = false
 				break
 			}
@@ -182,6 +216,16 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 				r.Value = ""
 				tempReading = []byte{}
 				capturingValue = true
+				//
+				sectionKey := string(prevLine.Section)
+				if !t.options.CaseSensitive {
+					sectionKey = strings.ToUpper(sectionKey)
+				}
+				sec := t.getSection(sectionKey)
+				if sec != nil {
+					sec.End = len(t.lines) + 1
+				}
+				//
 				continue
 			}
 			if !ignoringComment {
@@ -199,18 +243,56 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 	return r
 }
 
+func (t *TINIFile) getSection(sectionKey string) *_TSection {
+	for i := range t.sections {
+		if t.sections[i].Section == sectionKey {
+			return &t.sections[i]
+		}
+	}
+	return nil
+}
+
 func (t *TINIFile) Set(section string, key string, value TValue) {
-	sectionFound := -1
-	for i := range t.lines {
-		if (!t.options.CaseSensitive && strings.EqualFold(t.lines[i].Section, section)) ||
-			(t.options.CaseSensitive && t.lines[i].Section == section) {
-			if t.lines[i].Mode == KEY || sectionFound == -1 {
-				sectionFound = i
-			}
+	sectionKey := section
+	if !t.options.CaseSensitive {
+		sectionKey = strings.ToUpper(sectionKey)
+	}
+	sec := t.getSection(sectionKey)
+	if sec == nil {
+		if t.options.Debug {
+			fmt.Println("NEW SECTION: [", section, "] ->", key, "=", string(value.Value))
+		}
+		//
+		t.sections = append(t.sections, _TSection{
+			Section: sectionKey,
+			Begin:   len(t.lines) + 1,
+			End:     len(t.lines) + 2,
+		})
+		//
+		newLines := []_TLine{
+			{
+				Mode:    SECTION,
+				Section: section,
+				Line:    string(_Section[0]) + section + string(_Section[1]),
+			},
+			{
+				Mode:    KEY,
+				Section: section,
+				Key:     key,
+				Value:   string(value.Value),
+				Line:    key + string(_KeyValueDiff) + string(value.Value),
+			},
+		}
+		t.lines = append(t.lines, newLines...)
+		(*t).lines = t.lines
+		return
+	}
+	for i := sec.Begin; i <= sec.End && i < len(t.lines); i++ {
+		if t.lines[i].Mode == KEY {
 			if (!t.options.CaseSensitive && strings.EqualFold(t.lines[i].Key, key)) ||
 				(t.options.CaseSensitive && t.lines[i].Key == key) {
 				if t.options.Debug {
-					fmt.Println("EDIT VALUE: ", section, "->", key, "=", string(value.Value))
+					fmt.Println("EDIT VALUE: [", section, "]->", key, "=", string(value.Value))
 				}
 				key = t.lines[i].Key
 				tempKey := []byte(t.lines[i].Line[:strings.Index(t.lines[i].Line, key)+len(key+string(_KeyValueDiff))])
@@ -229,47 +311,49 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 		}
 	}
 	if len(value.Value) > 0 {
-		if sectionFound >= 0 {
-			if t.options.Debug {
-				fmt.Println("NEW KEY: ", section, "->", key, "=", string(value.Value))
-			}
-			newLine := _TLine{
-				Mode:    KEY,
-				Section: section,
-				Key:     key,
-				Value:   string(value.Value),
-				Line:    key + string(_KeyValueDiff) + string(value.Value),
-			}
-			t.lines = append(t.lines, _TLine{})
-			copy(t.lines[sectionFound+1:], t.lines[sectionFound:])
-			t.lines[sectionFound+1] = newLine
-			(*t).lines = t.lines
-		} else {
-			if t.options.Debug {
-				fmt.Println("NEW SECTION: ", section, "->", key, "=", string(value.Value))
-			}
-			newLines := []_TLine{
-				{
-					Mode:    SECTION,
-					Section: section,
-					Line:    string(_Section[0]) + section + string(_Section[1]),
-				},
-				{
-					Mode:    KEY,
-					Section: section,
-					Key:     key,
-					Value:   string(value.Value),
-					Line:    key + string(_KeyValueDiff) + string(value.Value),
-				},
-			}
-			t.lines = append(t.lines, newLines...)
-			(*t).lines = t.lines
+		if t.options.Debug {
+			fmt.Println("NEW KEY: [", section, "]->", key, "=", string(value.Value))
 		}
+		//
+		sec := t.getSection(sectionKey)
+		if sec == nil {
+			return
+		}
+		sec.End++
+		moving := false
+		for i := range t.sections {
+			if t.sections[i].Section == sectionKey {
+				moving = true
+			} else if moving {
+				t.sections[i].Begin++
+				t.sections[i].End++
+			}
+		}
+		//
+		newLine := _TLine{
+			Mode:    KEY,
+			Section: section,
+			Key:     key,
+			Value:   string(value.Value),
+			Line:    key + string(_KeyValueDiff) + string(value.Value),
+		}
+		t.lines = append(t.lines, _TLine{})
+		copy(t.lines[sec.End-1:], t.lines[sec.End-2:])
+		t.lines[sec.End-1] = newLine
+		(*t).lines = t.lines
 	}
 }
 
 func (t *TINIFile) Get(section string, key string) TValue {
-	for i := range t.lines {
+	sectionKey := section
+	if !t.options.CaseSensitive {
+		sectionKey = strings.ToUpper(sectionKey)
+	}
+	sec := t.getSection(sectionKey)
+	if sec == nil {
+		return TValue{}
+	}
+	for i := sec.Begin; i < sec.End; i++ {
 		if (!t.options.CaseSensitive && strings.EqualFold(t.lines[i].Section, section)) ||
 			(t.options.CaseSensitive && t.lines[i].Section == section) {
 			if (!t.options.CaseSensitive && strings.EqualFold(t.lines[i].Key, key)) ||
