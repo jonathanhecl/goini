@@ -1,9 +1,9 @@
 package inifile
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 	"strconv"
@@ -85,6 +85,40 @@ func New(o *TOptions) *TINIFile {
 	return &t
 }
 
+func ReadFile(Path string) ([]string, error) {
+	f, err := os.Open(Path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	var lines []string
+	buf := make([]byte, 32*1024)
+	for {
+		line := []byte{}
+		n, err := f.Read(buf)
+		if n > 0 {
+			for i := 0; i < n; i++ {
+				if buf[i] == 10 || buf[i] == 13 {
+					if len(line) > 0 {
+						lines = append(lines, string(line))
+						line = []byte{}
+					}
+				} else {
+					line = append(line, buf[i])
+				}
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("read %d bytes: %v", n, err)
+			break
+		}
+	}
+	return lines, nil
+}
+
 func Load(Path string, o *TOptions) (*TINIFile, error) {
 	t := TINIFile{}
 	t.lines = []_TLine{}
@@ -101,14 +135,10 @@ func Load(Path string, o *TOptions) (*TINIFile, error) {
 	if t.options.Debug {
 		timeMark = time.Now()
 	}
-	if f, err := os.Open(t.Filename); err != nil {
-		return nil, err
-	} else {
-		defer f.Close()
-		s := bufio.NewScanner(f)
+	if lines, err := ReadFile(Path); err == nil {
 		lineNumber := 0
-		for s.Scan() {
-			l := strings.TrimSpace(s.Text())
+		for i := range lines {
+			l := strings.TrimSpace(lines[i])
 			if lineNumber == 0 {
 				t.lines = append(t.lines, t.processLine(l, _TLine{}))
 			} else {
@@ -116,7 +146,8 @@ func Load(Path string, o *TOptions) (*TINIFile, error) {
 			}
 			lineNumber++
 		}
-		t.TotalLines = lineNumber
+	} else {
+		return nil, err
 	}
 	if t.options.Debug {
 		fmt.Println("Loaded on ", time.Since(timeMark))
