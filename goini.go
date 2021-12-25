@@ -229,7 +229,9 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 				}
 				break
 			}
-			if !capturingSection && _Section[0] == byte(line[i]) {
+			if !capturingSection &&
+				_Section[0] == byte(line[i]) &&
+				!capturingValue {
 				capturingSection = true
 				capturingKey = false
 				if t.options.Debug {
