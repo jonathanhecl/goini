@@ -8,7 +8,7 @@ With this package you can create or read INI files, preserving comments and type
 > coverage: 82.6% of statements
 >
 
-> go get github.com/jonathanhecl/inifile
+> go get github.com/jonathanhecl/go-inifile
 > 
 
 ## Features:
@@ -24,7 +24,7 @@ package main
 
 
 import (
-	"github.com/jonathanhecl/inifile"
+	inifile "github.com/jonathanhecl/go-inifile"
 )
 
 func main() {
