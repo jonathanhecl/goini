@@ -99,9 +99,11 @@ func ReadFile(Path string) ([]string, error) {
 	for {
 		line := []byte{}
 		n, err := f.Read(buf)
+		fmt.Println("next?", n, string(line))
 		if n > 0 {
 			for i := 0; i < n; i++ {
-				if buf[i] == 10 || buf[i] == 13 {
+				if buf[i] == 10 ||
+					buf[i] == 13 {
 					if len(line) > 0 {
 						lines = append(lines, string(line))
 						line = []byte{}
@@ -110,7 +112,12 @@ func ReadFile(Path string) ([]string, error) {
 					line = append(line, buf[i])
 				}
 			}
+			if len(line) > 0 {
+				lines = append(lines, string(line))
+				line = []byte{}
+			}
 		}
+		fmt.Println("next?", n, string(line))
 		if err == io.EOF {
 			break
 		}
