@@ -13,9 +13,9 @@ import (
 
 /*
 *
-* Easy INI File manager for Golang
-* Jonathan G. Hecl
-* https://github.com/jonathanhecl/inifile
+* INI File manager package on Golang
+* Created by Jonathan G. Hecl
+* https://github.com/jonathanhecl/go-inifile
 *
  */
 
