@@ -189,8 +189,10 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 	capturingValue := false
 	tempReading := []byte{}
 	for i := range line {
-		fmt.Println("Flags: ", ignoringBeginning, ignoringComment, capturingSection, capturingKey, capturingValue)
-		fmt.Println(string(line[i]))
+		if t.options.Debug {
+			fmt.Println("Flags: ", ignoringBeginning, ignoringComment, capturingSection, capturingKey, capturingValue)
+			fmt.Println(string(line[i]))
+		}
 		if ignoringBeginning && !bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) {
 			ignoringBeginning = false
 			capturingKey = true
