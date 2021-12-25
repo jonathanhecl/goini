@@ -42,6 +42,7 @@ type _TSection struct {
 }
 
 var _Section []byte = []byte{91, 93}
+var _ArraySeparator = []byte{44} // 44 is the ascii code for comma
 var _KeyValueDiff byte = byte(61)
 var _FlagComments []byte = []byte{35, 39, 47, 96} // 47 double
 var _IgnoredSpaces []byte = []byte{9, 10, 32}
@@ -113,7 +114,6 @@ func ReadFile(Path string) ([]string, error) {
 		}
 		if err != nil {
 			return nil, fmt.Errorf("read %d bytes: %v", n, err)
-			break
 		}
 	}
 	return lines, nil
@@ -182,18 +182,21 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 		Line:    line,
 	}
 	ignoringBeginning := true
+	possibleComment := false
 	ignoringComment := false
 	capturingSection := false
 	capturingKey := false
 	capturingValue := false
 	tempReading := []byte{}
 	for i := range line {
+		fmt.Println("Flags: ", ignoringBeginning, ignoringComment, capturingSection, capturingKey, capturingValue)
+		fmt.Println(string(line[i]))
 		if ignoringBeginning && !bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) {
 			ignoringBeginning = false
 			capturingKey = true
 		}
 		if !ignoringBeginning {
-			if !ignoringComment && bytes.Contains(_FlagComments, []byte{byte(line[i])}) {
+			if !ignoringComment && possibleComment && bytes.Contains(_FlagComments, []byte{byte(line[i])}) {
 				isComment := true
 				if byte(line[i]) == 47 && len(line) > i { // 47 special
 					if byte(line[i+1]) != 47 {
@@ -203,6 +206,9 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 				if isComment {
 					ignoringComment = true
 					capturingKey = false
+					if t.options.Debug {
+						fmt.Println("Comment")
+					}
 					break
 				}
 			}
@@ -210,11 +216,17 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 				!capturingValue && bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) {
 				capturingSection = false
 				capturingKey = false
+				if t.options.Debug {
+					fmt.Println("End of key")
+				}
 				break
 			}
 			if !capturingSection && _Section[0] == byte(line[i]) {
 				capturingSection = true
 				capturingKey = false
+				if t.options.Debug {
+					fmt.Println("Start of section")
+				}
 				continue
 			} else if capturingSection && _Section[1] == byte(line[i]) {
 				r.Mode = SECTION
@@ -238,6 +250,9 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 				}
 				//
 				capturingSection = false
+				if t.options.Debug {
+					fmt.Println("End of section")
+				}
 				break
 			}
 			if capturingKey && _KeyValueDiff == byte(line[i]) {
@@ -257,10 +272,19 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 					sec.End = len(t.lines) + 1
 				}
 				//
+				if t.options.Debug {
+					fmt.Println("Start of key")
+				}
 				continue
 			}
 			if !ignoringComment {
 				tempReading = append(tempReading, byte(line[i]))
+				if byte(line[i]) == 32 || // 32 space
+					byte(line[i]) == 9 { // 9 tab
+					possibleComment = true
+				} else {
+					possibleComment = false
+				}
 				if capturingValue {
 					r.Value = strings.TrimSpace(string(tempReading))
 				}
@@ -408,6 +432,14 @@ func (t TValue) String() string {
 	return string(t.Value)
 }
 
+func StringArray(s []string) TValue {
+	return TValue{Value: []byte(strings.Join(s, string(_ArraySeparator)))}
+}
+
+func (t TValue) StringArray() []string {
+	return strings.Split(string(t.Value), string(_ArraySeparator))
+}
+
 func Bool(b bool, isInt bool) TValue {
 	s := ""
 	if isInt {
@@ -518,7 +550,7 @@ func Uint64(i uint64) TValue {
 	return TValue{Value: []byte(s)}
 }
 
-func (t TValue) UInt64() uint64 {
+func (t TValue) Uint64() uint64 {
 	i, _ := strconv.ParseUint(string(t.Value), 10, 64)
 	return i
 }
