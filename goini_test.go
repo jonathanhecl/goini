@@ -1,4 +1,4 @@
-package inifile
+package goini
 
 import (
 	"fmt"

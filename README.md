@@ -1,4 +1,4 @@
-# go-inifile
+# goini
 ## INI File manager package on Golang
 
 [![forthebadge](https://forthebadge.com/images/badges/made-with-go.svg)](https://forthebadge.com)
@@ -8,7 +8,7 @@ With this package you can create or read INI files, preserving comments and type
 > coverage: 82.6% of statements
 >
 
-> go get github.com/jonathanhecl/go-inifile
+> go get github.com/jonathanhecl/goini
 > 
 
 ## Features:
@@ -24,21 +24,21 @@ package main
 
 
 import (
-    inifile "github.com/jonathanhecl/go-inifile"
+    "github.com/jonathanhecl/goini"
 )
 
 func main() {
 
     // Load an existent file
-	ini, _ := inifile.Load("./test.ini", nil)
+	ini, _ := goini.Load("./test.ini", nil)
     /*
         // New file
-        ini := inifile.New(&inifile.TOptions{CaseSensitive: false})
+        ini := goini.New(&goini.TOptions{CaseSensitive: false})
     */
     // Read a key
 	value := ini.Get("section", "key").String())
     // Set a key
-	ini.Set("section", "key", inifile.String("test"))
+	ini.Set("section", "key", goini.String("test"))
     // Save a file
 	ini.Save("./new.ini")
 

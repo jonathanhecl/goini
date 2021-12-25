@@ -1,4 +1,4 @@
-package inifile
+package goini
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 *
 * INI File manager package on Golang
 * Created by Jonathan G. Hecl
-* https://github.com/jonathanhecl/go-inifile
+* https://github.com/jonathanhecl/goini
 *
  */
 

@@ -1,3 +1,3 @@
-module github.com/jonathanhecl/go-inifile
+module github.com/jonathanhecl/goini
 
-go 1.16
+go 1.12
