@@ -1,8 +1,9 @@
-# inifile
+# go-inifile
+## INI File manager package on Golang
 
 [![forthebadge](https://forthebadge.com/images/badges/made-with-go.svg)](https://forthebadge.com)
 
-Easy INI File manager for Golang
+With this package you can create or read INI files, preserving comments and types, very quick & easy.
 
 > coverage: 82.6% of statements
 >
@@ -12,9 +13,10 @@ Easy INI File manager for Golang
 
 ## Features:
 
-* Get & Set values
-* Create sections & keys dinamicaly
-* Preserve all the comments
+* Get & Set values.
+* Create sections & keys dinamicaly.
+* Preserve all the comments.
+* Works with big & small files.
 
 ## Example:
 ```
