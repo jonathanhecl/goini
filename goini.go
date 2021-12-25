@@ -298,7 +298,6 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 					endingQuoting = strings.LastIndex(string(line[i:]), string(_FlagQuoting))
 					if endingQuoting != i {
 						possibleQuoting = true
-						fmt.Println("Quoting"+string(line), i, endingQuoting)
 					}
 				} else if endingQuoting == i {
 					endingQuoting = 0
