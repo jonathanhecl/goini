@@ -24,7 +24,7 @@ package main
 
 
 import (
-	inifile "github.com/jonathanhecl/go-inifile"
+    "github.com/jonathanhecl/go-inifile/inifile"
 )
 
 func main() {
