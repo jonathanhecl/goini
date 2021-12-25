@@ -37,7 +37,7 @@ var testValues = []TestValue{
 	{String: "//not a comment"},
 	{StringArray: []string{"test", "test2"}},
 }
-var specialString = "it is a string with slash // no comment"
+var specialString = "it is a string=with slash // no comment"
 
 func TestCreateNewFile(t *testing.T) {
 	ini := New(&TOptions{Debug: true})

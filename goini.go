@@ -283,6 +283,7 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 				if t.options.Debug {
 					fmt.Println("Start of key")
 				}
+				capturingKey = false
 				continue
 			}
 			if !ignoringComment {
