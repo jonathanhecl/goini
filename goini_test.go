@@ -37,6 +37,7 @@ var testValues = []TestValue{
 	{String: "//not a comment"},
 	{StringArray: []string{"test", "test2"}},
 }
+var specialString = "it is a string with slash // no comment"
 
 func TestCreateNewFile(t *testing.T) {
 	ini := New(&TOptions{Debug: true})
@@ -67,6 +68,7 @@ func TestCreateNewFile(t *testing.T) {
 			ini.Set("Test", fmt.Sprintf("%dbool", i), Bool(v.Bool, v.Bool))
 		}
 	}
+	ini.Set("Test", "specialString", String(specialString))
 	err := ini.Save("test.ini")
 	if err != nil {
 		t.Error(err)
@@ -129,5 +131,8 @@ func TestReadFile(t *testing.T) {
 				t.Errorf("Expected %t, got %t", v.Bool, ini.Get("Test", fmt.Sprintf("%dbool", i)).Bool())
 			}
 		}
+	}
+	if ini.Get("Test", "specialString").String() != specialString {
+		t.Errorf("Expected %s, got %s", specialString, ini.Get("Test", "specialString").String())
 	}
 }

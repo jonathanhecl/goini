@@ -42,11 +42,12 @@ type _TSection struct {
 	End     int
 }
 
-var _Section []byte = []byte{91, 93}
-var _ArraySeparator = []byte{44} // 44 is the ascii code for comma
-var _KeyValueDiff byte = byte(61)
+var _Section []byte = []byte{91, 93}              // [ ]
+var _ArraySeparator []byte = []byte{44}           // 44 is the ascii code for comma
 var _FlagComments []byte = []byte{35, 39, 47, 96} // 47 double
-var _IgnoredSpaces []byte = []byte{9, 10, 32}
+var _IgnoredSpaces []byte = []byte{9, 10, 32}     // Bool returns the value as a boolean.
+var _KeyValueDiff byte = byte(61)                 // 61 is the ascii code for =
+var _FlagQuoting byte = byte(34)                  // 34 is the ascii code for "
 
 type TValue struct {
 	Value []byte
@@ -185,22 +186,26 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 	ignoringBeginning := true
 	possibleComment := false
 	ignoringComment := false
+	possibleQuoting := false
+	endingQuoting := 0
 	capturingSection := false
 	capturingKey := false
 	capturingValue := false
 	tempReading := []byte{}
 	for i := range line {
-		// if t.options.Debug {
-		// 	fmt.Println("Flags: ", ignoringBeginning, ignoringComment, capturingSection, capturingKey, capturingValue)
-		// 	fmt.Println(string(line[i]))
-		// }
+		if t.options.Debug {
+			fmt.Println("Flags: ", ignoringBeginning, ignoringComment, capturingSection, capturingKey, capturingValue)
+			fmt.Println(string(line[i]))
+		}
 		if ignoringBeginning && !bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) {
 			ignoringBeginning = false
 			capturingKey = true
 		}
 		if !ignoringBeginning {
-			if !ignoringComment && possibleComment && bytes.Contains(_FlagComments, []byte{byte(line[i])}) {
+			if !ignoringComment && !possibleQuoting &&
+				possibleComment && bytes.Contains(_FlagComments, []byte{byte(line[i])}) {
 				isComment := true
+				possibleComment = false
 				if byte(line[i]) == 47 && len(line) > i { // 47 special
 					if byte(line[i+1]) != 47 {
 						isComment = false
@@ -282,11 +287,22 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 			}
 			if !ignoringComment {
 				tempReading = append(tempReading, byte(line[i]))
-				if byte(line[i]) == 32 || // 32 space
-					byte(line[i]) == 9 { // 9 tab
+				if bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) && // 9 tab
+					!possibleQuoting {
 					possibleComment = true
 				} else {
 					possibleComment = false
+				}
+				if _FlagQuoting == byte(line[i]) &&
+					len(r.Value) == 0 {
+					endingQuoting = strings.LastIndex(string(line[i:]), string(_FlagQuoting))
+					if endingQuoting != i {
+						possibleQuoting = true
+						fmt.Println("Quoting"+string(line), i, endingQuoting)
+					}
+				} else if endingQuoting == i {
+					endingQuoting = 0
+					possibleQuoting = false
 				}
 				if capturingValue {
 					r.Value = strings.TrimSpace(string(tempReading))
@@ -337,8 +353,8 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 				Mode:    KEY,
 				Section: section,
 				Key:     key,
-				Value:   string(value.Value),
-				Line:    key + string(_KeyValueDiff) + string(value.Value),
+				Value:   string(ValueToSave(value.Value)),
+				Line:    key + string(_KeyValueDiff) + string(ValueToSave(value.Value)),
 			},
 		}
 		t.lines = append(t.lines, newLines...)
@@ -350,7 +366,7 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 			if (!t.options.CaseSensitive && strings.EqualFold(t.lines[i].Key, key)) ||
 				(t.options.CaseSensitive && t.lines[i].Key == key) {
 				if t.options.Debug {
-					fmt.Println("EDIT VALUE: [", section, "]->", key, "=", string(value.Value))
+					fmt.Println("EDIT VALUE: [", section, "]->", key, "=", string(ValueToSave(value.Value)))
 				}
 				key = t.lines[i].Key
 				tempKey := []byte(t.lines[i].Line[:strings.Index(t.lines[i].Line, key)+len(key+string(_KeyValueDiff))])
@@ -359,7 +375,7 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 				if len(t.lines[i].Value)+len(key) < len(tempRest) {
 					tempNonValue = append([]byte{32}, tempRest[len(t.lines[i].Value)+len(key)+2:]...)
 				}
-				(*t).lines[i].Value = string(value.Value)
+				(*t).lines[i].Value = string(ValueToSave(value.Value))
 				(*t).lines[i].Line = string(tempKey) + t.lines[i].Value + string(tempNonValue)
 				if t.options.Debug {
 					fmt.Println("SET RETURN: ", t.lines[i])
@@ -370,7 +386,7 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 	}
 	if len(value.Value) > 0 {
 		if t.options.Debug {
-			fmt.Println("NEW KEY: [", section, "]->", key, "=", string(value.Value))
+			fmt.Println("NEW KEY: [", section, "]->", key, "=", string(ValueToSave(value.Value)))
 		}
 		//
 		sec := t.getSection(sectionKey)
@@ -392,8 +408,8 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 			Mode:    KEY,
 			Section: section,
 			Key:     key,
-			Value:   string(value.Value),
-			Line:    key + string(_KeyValueDiff) + string(value.Value),
+			Value:   string(ValueToSave(value.Value)),
+			Line:    key + string(_KeyValueDiff) + string(ValueToSave(value.Value)),
 		}
 		t.lines = append(t.lines, _TLine{})
 		copy(t.lines[sec.End-1:], t.lines[sec.End-2:])
@@ -425,6 +441,34 @@ func (t *TINIFile) Get(section string, key string) TValue {
 	return TValue{}
 }
 
+func ValueToSave(value []byte) []byte {
+	flagQuote := false
+	for i := range value {
+		if value[i] == '\n' {
+			value[i] = ' '
+		} else if bytes.Contains(_FlagComments, []byte{byte(value[i])}) {
+			flagQuote = true
+		}
+	}
+	if flagQuote && len(value) > 0 {
+		if value[0] != _FlagQuoting {
+			value = append([]byte{_FlagQuoting}, value...)
+			value = append(value, _FlagQuoting)
+		}
+	}
+	return value
+}
+
+func ValueToRead(value []byte) []byte {
+	if len(value) > 0 {
+		if value[0] == _FlagQuoting &&
+			value[len(value)-1] == _FlagQuoting {
+			value = value[1 : len(value)-1]
+		}
+	}
+	return value
+}
+
 // Convertions
 
 func String(s string) TValue {
@@ -432,7 +476,7 @@ func String(s string) TValue {
 }
 
 func (t TValue) String() string {
-	return string(t.Value)
+	return string(ValueToRead(t.Value))
 }
 
 func StringArray(s []string) TValue {
