@@ -94,10 +94,12 @@ func ReadFile(Path string) ([]string, error) {
 		return nil, err
 	}
 	defer f.Close()
-	var lines []string
-	buf := make([]byte, 32*1024)
+	var (
+		buf   []byte = make([]byte, 32*1024)
+		lines []string
+		line  []byte = []byte{}
+	)
 	for {
-		line := []byte{}
 		n, err := f.Read(buf)
 		if n > 0 {
 			for i := 0; i < n; i++ {
@@ -111,9 +113,6 @@ func ReadFile(Path string) ([]string, error) {
 					line = append(line, buf[i])
 				}
 			}
-			if len(line) > 0 {
-				lines = append(lines, string(line))
-			}
 		}
 		if err == io.EOF {
 			break
@@ -121,6 +120,9 @@ func ReadFile(Path string) ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read %d bytes: %v", n, err)
 		}
+	}
+	if len(line) > 0 {
+		lines = append(lines, string(line))
 	}
 	return lines, nil
 }
