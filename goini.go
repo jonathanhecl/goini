@@ -62,8 +62,9 @@ type TINIFile struct {
 }
 
 type TOptions struct {
-	Debug         bool
-	CaseSensitive bool
+	Debug                  bool
+	CaseSensitive          bool
+	ForceSaveWithoutQuotes bool
 }
 
 var timeMark time.Time
@@ -81,8 +82,9 @@ func New(o *TOptions) *TINIFile {
 	t.options = o
 	if t.options == nil {
 		t.options = &TOptions{
-			CaseSensitive: false,
-			Debug:         false,
+			CaseSensitive:          false,
+			Debug:                  false,
+			ForceSaveWithoutQuotes: false,
 		}
 	}
 	return &t
@@ -136,8 +138,9 @@ func Load(Path string, o *TOptions) (*TINIFile, error) {
 	t.options = o
 	if t.options == nil {
 		t.options = &TOptions{
-			CaseSensitive: false,
-			Debug:         false,
+			CaseSensitive:          false,
+			Debug:                  false,
+			ForceSaveWithoutQuotes: false,
 		}
 	}
 	if t.options.Debug {
@@ -361,8 +364,8 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 				Mode:    KEY,
 				Section: section,
 				Key:     key,
-				Value:   string(ValueToSave(value.Value)),
-				Line:    key + string(_KeyValueDiff) + string(ValueToSave(value.Value)),
+				Value:   string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes)),
+				Line:    key + string(_KeyValueDiff) + string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes)),
 			},
 		}
 		t.lines = append(t.lines, newLines...)
@@ -374,7 +377,7 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 			if (!t.options.CaseSensitive && strings.EqualFold(t.lines[i].Key, key)) ||
 				(t.options.CaseSensitive && t.lines[i].Key == key) {
 				if t.options.Debug {
-					fmt.Println("EDIT VALUE: [", section, "]->", key, "=", string(ValueToSave(value.Value)))
+					fmt.Println("EDIT VALUE: [", section, "]->", key, "=", string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes)))
 				}
 				key = t.lines[i].Key
 				tempKey := []byte(t.lines[i].Line[:strings.Index(t.lines[i].Line, key)+len(key+string(_KeyValueDiff))])
@@ -383,7 +386,7 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 				if len(t.lines[i].Value)+len(key) < len(tempRest) {
 					tempNonValue = append([]byte{32}, tempRest[len(t.lines[i].Value)+len(key)+2:]...)
 				}
-				(*t).lines[i].Value = string(ValueToSave(value.Value))
+				(*t).lines[i].Value = string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes))
 				(*t).lines[i].Line = string(tempKey) + t.lines[i].Value + string(tempNonValue)
 				if t.options.Debug {
 					fmt.Println("SET RETURN: ", t.lines[i])
@@ -394,7 +397,7 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 	}
 	if len(value.Value) > 0 {
 		if t.options.Debug {
-			fmt.Println("NEW KEY: [", section, "]->", key, "=", string(ValueToSave(value.Value)))
+			fmt.Println("NEW KEY: [", section, "]->", key, "=", string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes)))
 		}
 		//
 		sec := t.getSection(sectionKey)
@@ -416,8 +419,8 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 			Mode:    KEY,
 			Section: section,
 			Key:     key,
-			Value:   string(ValueToSave(value.Value)),
-			Line:    key + string(_KeyValueDiff) + string(ValueToSave(value.Value)),
+			Value:   string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes)),
+			Line:    key + string(_KeyValueDiff) + string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes)),
 		}
 		t.lines = append(t.lines, _TLine{})
 		copy(t.lines[sec.End-1:], t.lines[sec.End-2:])
@@ -449,19 +452,21 @@ func (t *TINIFile) Get(section string, key string) TValue {
 	return TValue{}
 }
 
-func ValueToSave(value []byte) []byte {
-	flagQuote := false
-	for i := range value {
-		if value[i] == '\n' {
-			value[i] = ' '
-		} else if bytes.Contains(_FlagComments, []byte{byte(value[i])}) {
-			flagQuote = true
+func ValueToSave(value []byte, forceWithoutQuotes bool) []byte {
+	if !forceWithoutQuotes {
+		flagQuote := false
+		for i := range value {
+			if value[i] == '\n' {
+				value[i] = ' '
+			} else if bytes.Contains(_FlagComments, []byte{byte(value[i])}) {
+				flagQuote = true
+			}
 		}
-	}
-	if flagQuote && len(value) > 0 {
-		if value[0] != _FlagQuoting {
-			value = append([]byte{_FlagQuoting}, value...)
-			value = append(value, _FlagQuoting)
+		if flagQuote && len(value) > 0 {
+			if value[0] != _FlagQuoting {
+				value = append([]byte{_FlagQuoting}, value...)
+				value = append(value, _FlagQuoting)
+			}
 		}
 	}
 	return value
