@@ -1,7 +1,9 @@
 # goini
 ## INI File manager package on Golang
 
-[![forthebadge](https://forthebadge.com/images/badges/made-with-go.svg)](https://forthebadge.com)
+[![Go](https://github.com/jonathanhecl/goini/actions/workflows/go.yml/badge.svg)](https://github.com/jonathanhecl/goini/actions/workflows/go.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jonathanhecl/goini)](https://goreportcard.com/report/github.com/jonathanhecl/goini)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 With this package you can create or read INI files, preserving comments and types, very quick & easy.
 
