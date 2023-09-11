@@ -76,7 +76,7 @@ func TestCreateNewFile(t *testing.T) {
 }
 
 func TestReadFile(t *testing.T) {
-	ini, err := Load("test.ini", &TOptions{Debug: true})
+	ini, err := Load("test.ini", &TOptions{Debug: false})
 	if err != nil {
 		t.Error(err)
 	}
@@ -134,5 +134,13 @@ func TestReadFile(t *testing.T) {
 	}
 	if ini.Get("Test", "specialString").String() != specialString {
 		t.Errorf("Expected %s, got %s", specialString, ini.Get("Test", "specialString").String())
+	}
+
+	if ini.Get("Extra", "string_comment").String() != "value" {
+		t.Errorf("Expected %s, got %s", "value", ini.Get("Extra", "string_comment").String())
+	}
+
+	if ini.Get("Extra", "string_no_comment").String() != "value'no comment" {
+		t.Errorf("Expected %s, got %s", "value", ini.Get("Extra", "string_no_comment").String())
 	}
 }
