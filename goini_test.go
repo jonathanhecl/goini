@@ -76,7 +76,7 @@ func TestCreateNewFile(t *testing.T) {
 }
 
 func TestReadFile(t *testing.T) {
-	ini, err := Load("test.ini", &TOptions{Debug: false})
+	ini, err := Load("test.ini", &TOptions{Debug: true})
 	if err != nil {
 		t.Error(err)
 	}

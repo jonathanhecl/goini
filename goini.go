@@ -203,8 +203,35 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 	tempReading := []byte{}
 	for i := range line {
 		if t.options.Debug {
-			fmt.Println("Flags: ", ignoringBeginning, ignoringComment, capturingSection, capturingKey, capturingValue)
-			fmt.Println(string(line[i]))
+			flagsStr := ""
+			if ignoringBeginning {
+				flagsStr += "ignoringBeginning "
+			}
+			if ignoringComment {
+				flagsStr += "ignoringComment "
+			}
+			if capturingSection {
+				flagsStr += "capturingSection "
+			}
+			if capturingKey {
+				flagsStr += "capturingKey "
+			}
+			if capturingValue {
+				flagsStr += "capturingValue "
+			}
+			if possibleComment {
+				flagsStr += "possibleComment "
+			}
+			if possibleQuoting {
+				flagsStr += "possibleQuoting "
+			}
+			if endingQuoting > 0 {
+				flagsStr += fmt.Sprintf("endingQuoting(%d) ", endingQuoting)
+			}
+			if len(flagsStr) > 0 {
+				flagsStr = flagsStr[:len(flagsStr)-1] // remove last space
+			}
+			fmt.Println(fmt.Sprintf("Previous flags: (%s) - Current character: %s", flagsStr, string(line[i])))
 		}
 		if ignoringBeginning && !bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) {
 			ignoringBeginning = false
@@ -224,7 +251,7 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 					ignoringComment = true
 					capturingKey = false
 					if t.options.Debug {
-						fmt.Println("Comment")
+						fmt.Println("Ignoring Comments")
 					}
 					break
 				}
