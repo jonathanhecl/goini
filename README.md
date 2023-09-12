@@ -7,7 +7,7 @@
 
 With this package you can create or read INI files, preserving comments and types, very quick & easy.
 
-> coverage: 83.9% of statements
+> coverage: 92.0% of statements
 >
 
 > go get github.com/jonathanhecl/goini
@@ -16,7 +16,7 @@ With this package you can create or read INI files, preserving comments and type
 ## Features:
 
 * Get & Set values.
-* Create sections & keys dinamicaly.
+* Create sections & keys dynamically.
 * Preserve all the comments.
 * Works with big & small files.
 
@@ -62,4 +62,4 @@ func main() {
 * Float64
 
 ## All made on day 21 Agu 2021
-## Updated 11 Sep 2023
+## Updated 12 Sep 2023
