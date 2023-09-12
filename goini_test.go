@@ -2,6 +2,7 @@ package goini
 
 import (
 	"fmt"
+	"os"
 	"testing"
 )
 
@@ -134,5 +135,59 @@ func TestReadFile(t *testing.T) {
 	}
 	if ini.Get("Test", "specialString").String() != specialString {
 		t.Errorf("Expected %s, got %s", specialString, ini.Get("Test", "specialString").String())
+	}
+}
+
+func TestSpecial2(t *testing.T) {
+	content := []byte(`[Test]
+change=4 ' comment
+ignore=I'will ignore this
+same=Never change this	// comment`)
+	err := os.WriteFile("test2.ini", content, 0644)
+	if err != nil {
+		t.Errorf("Error creating test file: %s", err)
+	}
+
+	ini, err := Load("test2.ini", &TOptions{Debug: true, ForceSaveWithoutQuotes: true})
+	if err != nil {
+		t.Error(err)
+	}
+
+	if ini.Get("Test", "change").Int() != 4 {
+		t.Errorf("Expected 4, got %d", ini.Get("Test", "change").Int())
+	}
+
+	if ini.Get("Test", "ignore").String() != "I'will ignore this" {
+		t.Errorf("Expected I'will ignore this, got %s", ini.Get("Test", "ignore").String())
+	}
+
+	if ini.Get("Test", "same").String() != "Never change this" {
+		t.Errorf("Expected Never change this, got %s", ini.Get("Test", "same").String())
+	}
+
+	// Test save
+	ini.Set("Test", "change", Int(5))
+	ini.Set("Test", "ignore", String("I'will change this"))
+	ini.Set("Test", "same", String("Never change this"))
+	err = ini.Save("test2.ini")
+	if err != nil {
+		t.Error(err)
+	}
+
+	ini, err = Load("test2.ini", &TOptions{Debug: true})
+	if err != nil {
+		t.Error(err)
+	}
+
+	if ini.Get("Test", "change").Int() != 5 {
+		t.Errorf("Expected 5, got %d", ini.Get("Test", "change").Int())
+	}
+
+	if ini.Get("Test", "ignore").String() != "I'will change this" {
+		t.Errorf("Expected I'will change this, got %s", ini.Get("Test", "ignore").String())
+	}
+
+	if ini.Get("Test", "same").String() != "Never change this" {
+		t.Errorf("Expected Never change this, got %s", ini.Get("Test", "same").String())
 	}
 }

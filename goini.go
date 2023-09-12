@@ -372,15 +372,15 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 	sec := t.getSection(sectionKey)
 	if sec == nil {
 		if t.options.Debug {
-			fmt.Println("NEW SECTION: [", section, "] ->", key, "=", string(value.Value))
+			fmt.Println(fmt.Sprintf("Creating section [%s] with key [%s] and value [%s]", section, key, string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes))))
 		}
-		//
+
 		t.sections = append(t.sections, _TSection{
 			Section: sectionKey,
 			Begin:   len(t.lines) + 1,
 			End:     len(t.lines) + 2,
 		})
-		//
+
 		newLines := []_TLine{
 			{
 				Mode:    SECTION,
@@ -399,13 +399,25 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 		(*t).lines = t.lines
 		return
 	}
+
+	var prevLine _TLine
+
 	for i := sec.Begin; i <= sec.End && i < len(t.lines); i++ {
 		if t.lines[i].Mode == KEY {
+			prevLine = t.lines[i]
 			if (!t.options.CaseSensitive && strings.EqualFold(t.lines[i].Key, key)) ||
 				(t.options.CaseSensitive && t.lines[i].Key == key) {
-				if t.options.Debug {
-					fmt.Println("EDIT VALUE: [", section, "]->", key, "=", string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes)))
+				if t.lines[i].Value == string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes)) {
+					if t.options.Debug {
+						fmt.Println(fmt.Sprintf("Ignoring value of key [%s] in section [%s], value is the same: [%s]", key, section, t.lines[i].Value))
+					}
+					return
 				}
+
+				if t.options.Debug {
+					fmt.Println(fmt.Sprintf("Changing value of key [%s] in section [%s], previous value: [%s], new value: [%s]", key, section, t.lines[i].Value, string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes))))
+				}
+
 				key = t.lines[i].Key
 				tempKey := []byte(t.lines[i].Line[:strings.Index(t.lines[i].Line, key)+len(key+string(_KeyValueDiff))])
 				tempRest := []byte(t.lines[i].Line[len(tempKey):])
@@ -416,7 +428,7 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 				(*t).lines[i].Value = string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes))
 				(*t).lines[i].Line = string(tempKey) + t.lines[i].Value + string(tempNonValue)
 				if t.options.Debug {
-					fmt.Println("SET RETURN: ", t.lines[i])
+					fmt.Println(fmt.Sprintf("Line changed, previous line: [%s], new line: [%s]", prevLine.Line, t.lines[i].Line))
 				}
 				return
 			}
