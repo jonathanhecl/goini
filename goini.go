@@ -422,9 +422,10 @@ func (t *TINIFile) Set(section string, key string, value TValue) {
 				tempKey := []byte(t.lines[i].Line[:strings.Index(t.lines[i].Line, key)+len(key+string(_KeyValueDiff))])
 				tempRest := []byte(t.lines[i].Line[len(tempKey):])
 				tempNonValue := []byte{}
-				if len(t.lines[i].Value)+len(key) < len(tempRest) {
-					tempNonValue = append([]byte{32}, tempRest[len(t.lines[i].Value)+len(key)+2:]...)
+				if len(t.lines[i].Value)+1 < len(tempRest) {
+					tempNonValue = append([]byte{32}, tempRest[len(t.lines[i].Value)+1:]...)
 				}
+
 				(*t).lines[i].Value = string(ValueToSave(value.Value, t.options.ForceSaveWithoutQuotes))
 				(*t).lines[i].Line = string(tempKey) + t.lines[i].Value + string(tempNonValue)
 				if t.options.Debug {
