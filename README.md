@@ -61,5 +61,4 @@ func main() {
 * Float32
 * Float64
 
-## All made on day 21 Agu 2021
-## Updated 12 Sep 2023
+## Updated 21 dic 2023
