@@ -142,13 +142,18 @@ func TestSpecial2(t *testing.T) {
 	content := []byte(`[Test]
 change=4 ' comment
 ignore=I'will ignore this
-same=Never change this	// comment`)
+
+# preserve this line
+
+same=Never change this	// comment
+
+# comment test`)
 	err := os.WriteFile("test2.ini", content, 0644)
 	if err != nil {
 		t.Errorf("Error creating test file: %s", err)
 	}
 
-	ini, err := Load("test2.ini", &TOptions{Debug: true, ForceSaveWithoutQuotes: true})
+	ini, err := Load("test2.ini", &TOptions{Debug: true, ForceSaveWithoutQuotes: true, DontPreserveEmptyLines: false})
 	if err != nil {
 		t.Error(err)
 	}

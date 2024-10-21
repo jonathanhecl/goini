@@ -67,6 +67,7 @@ type TINIFile struct {
 type TOptions struct {
 	Debug                  bool
 	CaseSensitive          bool
+	DontPreserveEmptyLines bool
 	ForceSaveWithoutQuotes bool
 }
 
@@ -85,15 +86,16 @@ func New(o *TOptions) *TINIFile {
 	t.options = o
 	if t.options == nil {
 		t.options = &TOptions{
-			CaseSensitive:          false,
 			Debug:                  false,
+			CaseSensitive:          false,
+			DontPreserveEmptyLines: false,
 			ForceSaveWithoutQuotes: false,
 		}
 	}
 	return &t
 }
 
-func ReadFile(Path string) ([]string, error) {
+func ReadFile(Path string, EmptyLines bool) ([]string, error) {
 	f, err := os.Open(Path)
 	if err != nil {
 		return nil, err
@@ -111,7 +113,7 @@ func ReadFile(Path string) ([]string, error) {
 			for i := 0; i < n; i++ {
 				if buf[i] == 10 ||
 					buf[i] == 13 {
-					if len(line) > 0 {
+					if len(line) > 0 || EmptyLines {
 						lines = append(lines, string(line))
 						line = []byte{}
 					}
@@ -127,9 +129,10 @@ func ReadFile(Path string) ([]string, error) {
 			return nil, fmt.Errorf("read %d bytes: %v", n, err)
 		}
 	}
-	if len(line) > 0 {
+	if len(line) > 0 || EmptyLines {
 		lines = append(lines, string(line))
 	}
+
 	return lines, nil
 }
 
@@ -145,12 +148,13 @@ func Load(Path string, o *TOptions) (*TINIFile, error) {
 			CaseSensitive:          false,
 			Debug:                  false,
 			ForceSaveWithoutQuotes: false,
+			DontPreserveEmptyLines: false,
 		}
 	}
 	if t.options.Debug {
 		timeMark = time.Now()
 	}
-	if lines, err := ReadFile(Path); err == nil {
+	if lines, err := ReadFile(Path, !t.options.DontPreserveEmptyLines); err == nil {
 		lineNumber := 0
 		for i := range lines {
 			l := strings.TrimSpace(lines[i])
