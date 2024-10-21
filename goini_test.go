@@ -171,6 +171,8 @@ func TestSpecial2(t *testing.T) {
 		t.Errorf("Expected Never change this, got %s", ini.Get("Test", "same").String())
 	}
 
+	// os.Exit(1)
+
 	// Test save
 	ini.Set("Test", "change", Int(5))
 	ini.Set("Test", "ignore", String("I'will change this"))

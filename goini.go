@@ -221,160 +221,162 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 	capturingValue := false
 	tempReading := []byte{}
 
-	fmt.Println("Processing line: ", line, len(line))
+	if len(line) == 0 {
+		ignoringBeginning = true
+	} else {
+		for i := range line {
+			if t.options.Debug {
+				flagsStr := ""
+				if ignoringBeginning {
+					flagsStr += "ignoringBeginning "
+				}
+				if ignoringComment {
+					flagsStr += "ignoringComment "
+				}
+				if capturingSection {
+					flagsStr += "capturingSection "
+				}
+				if capturingKey {
+					flagsStr += "capturingKey "
+				}
+				if capturingValue {
+					flagsStr += "capturingValue "
+				}
+				if possibleComment {
+					flagsStr += "possibleComment "
+				}
+				if possibleQuoting {
+					flagsStr += "possibleQuoting "
+				}
+				if endingQuoting > 0 {
+					flagsStr += fmt.Sprintf("endingQuoting(%d) ", endingQuoting)
+				}
+				if len(flagsStr) > 0 {
+					flagsStr = flagsStr[:len(flagsStr)-1] // remove last space
+				}
+				fmt.Println(fmt.Sprintf("Previous flags: (%s) - Current character: %s", flagsStr, string(line[i])))
+			}
 
-	for i := range line {
-		if t.options.Debug {
-			flagsStr := ""
-			if ignoringBeginning {
-				flagsStr += "ignoringBeginning "
+			if ignoringBeginning && !bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) {
+				ignoringBeginning = false
+				capturingKey = true
 			}
-			if ignoringComment {
-				flagsStr += "ignoringComment "
-			}
-			if capturingSection {
-				flagsStr += "capturingSection "
-			}
-			if capturingKey {
-				flagsStr += "capturingKey "
-			}
-			if capturingValue {
-				flagsStr += "capturingValue "
-			}
-			if possibleComment {
-				flagsStr += "possibleComment "
-			}
-			if possibleQuoting {
-				flagsStr += "possibleQuoting "
-			}
-			if endingQuoting > 0 {
-				flagsStr += fmt.Sprintf("endingQuoting(%d) ", endingQuoting)
-			}
-			if len(flagsStr) > 0 {
-				flagsStr = flagsStr[:len(flagsStr)-1] // remove last space
-			}
-			fmt.Println(fmt.Sprintf("Previous flags: (%s) - Current character: %s", flagsStr, string(line[i])))
-		}
 
-		if ignoringBeginning && !bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) {
-			ignoringBeginning = false
-			capturingKey = true
-		}
-
-		if !ignoringBeginning {
-			if !ignoringComment && !possibleQuoting &&
-				possibleComment && bytes.Contains(_FlagComments, []byte{byte(line[i])}) {
-				isComment := true
-				possibleComment = false
-				if byte(line[i]) == 47 && len(line) > i { // 47 special
-					if byte(line[i+1]) != 47 {
-						isComment = false
+			if !ignoringBeginning {
+				if !ignoringComment && !possibleQuoting &&
+					possibleComment && bytes.Contains(_FlagComments, []byte{byte(line[i])}) {
+					isComment := true
+					possibleComment = false
+					if byte(line[i]) == 47 && len(line) > i { // 47 special
+						if byte(line[i+1]) != 47 {
+							isComment = false
+						}
+					}
+					if isComment {
+						ignoringComment = true
+						capturingKey = false
+						if t.options.Debug {
+							fmt.Println("Ignoring Comments")
+						}
+						break
 					}
 				}
-				if isComment {
-					ignoringComment = true
+
+				if (capturingSection || capturingKey) &&
+					!capturingValue && bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) {
+					capturingSection = false
 					capturingKey = false
 					if t.options.Debug {
-						fmt.Println("Ignoring Comments")
+						fmt.Println("End of key")
 					}
 					break
 				}
-			}
 
-			if (capturingSection || capturingKey) &&
-				!capturingValue && bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) {
-				capturingSection = false
-				capturingKey = false
-				if t.options.Debug {
-					fmt.Println("End of key")
-				}
-				break
-			}
+				if !capturingSection &&
+					_Section[0] == byte(line[i]) &&
+					!capturingValue {
+					capturingSection = true
+					capturingKey = false
 
-			if !capturingSection &&
-				_Section[0] == byte(line[i]) &&
-				!capturingValue {
-				capturingSection = true
-				capturingKey = false
-
-				if t.options.Debug {
-					fmt.Println("Start of section")
-				}
-				continue
-			} else if capturingSection && _Section[1] == byte(line[i]) {
-				r.Mode = SECTION
-				r.Section = string(tempReading)
-				r.Key = ""
-				r.Value = ""
-
-				sectionKey := string(tempReading)
-				if !t.options.CaseSensitive {
-					sectionKey = strings.ToUpper(sectionKey)
-				}
-
-				sec := t.getSection(sectionKey)
-				if sec == nil {
-					t.sections = append(t.sections, _TSection{
-						Section: sectionKey,
-						Begin:   len(t.lines) + 1,
-						End:     len(t.lines) + 1,
-					})
-				} else {
-					sec.End = len(t.lines) + 1
-				}
-
-				capturingSection = false
-				if t.options.Debug {
-					fmt.Println("End of section")
-				}
-				break
-			}
-
-			if capturingKey && _KeyValueDiff == byte(line[i]) {
-				r.Mode = KEY
-				r.Section = prevLine.Section
-				r.Key = string(tempReading)
-				r.Value = ""
-				tempReading = []byte{}
-				capturingValue = true
-
-				sectionKey := string(prevLine.Section)
-				if !t.options.CaseSensitive {
-					sectionKey = strings.ToUpper(sectionKey)
-				}
-
-				sec := t.getSection(sectionKey)
-				if sec != nil {
-					sec.End = len(t.lines) + 1
-				}
-
-				if t.options.Debug {
-					fmt.Println("Start of key")
-				}
-				capturingKey = false
-				continue
-			}
-
-			if !ignoringComment {
-				tempReading = append(tempReading, byte(line[i]))
-				if bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) && // 9 tab
-					!possibleQuoting {
-					possibleComment = true
-				} else {
-					possibleComment = false
-				}
-				if _FlagQuoting == byte(line[i]) &&
-					len(r.Value) == 0 {
-					endingQuoting = strings.LastIndex(string(line[i:]), string(_FlagQuoting))
-					if endingQuoting != i {
-						possibleQuoting = true
+					if t.options.Debug {
+						fmt.Println("Start of section")
 					}
-				} else if endingQuoting == i {
-					endingQuoting = 0
-					possibleQuoting = false
+					continue
+				} else if capturingSection && _Section[1] == byte(line[i]) {
+					r.Mode = SECTION
+					r.Section = string(tempReading)
+					r.Key = ""
+					r.Value = ""
+
+					sectionKey := string(tempReading)
+					if !t.options.CaseSensitive {
+						sectionKey = strings.ToUpper(sectionKey)
+					}
+
+					sec := t.getSection(sectionKey)
+					if sec == nil {
+						t.sections = append(t.sections, _TSection{
+							Section: sectionKey,
+							Begin:   len(t.lines) + 1,
+							End:     len(t.lines) + 1,
+						})
+					} else {
+						sec.End = len(t.lines) + 1
+					}
+
+					capturingSection = false
+					if t.options.Debug {
+						fmt.Println("End of section")
+					}
+					break
 				}
-				if capturingValue {
-					r.Value = strings.TrimSpace(string(tempReading))
+
+				if capturingKey && _KeyValueDiff == byte(line[i]) {
+					r.Mode = KEY
+					r.Section = prevLine.Section
+					r.Key = string(tempReading)
+					r.Value = ""
+					tempReading = []byte{}
+					capturingValue = true
+
+					sectionKey := string(prevLine.Section)
+					if !t.options.CaseSensitive {
+						sectionKey = strings.ToUpper(sectionKey)
+					}
+
+					sec := t.getSection(sectionKey)
+					if sec != nil {
+						sec.End = len(t.lines) + 1
+					}
+
+					if t.options.Debug {
+						fmt.Println("Start of key")
+					}
+					capturingKey = false
+					continue
+				}
+
+				if !ignoringComment {
+					tempReading = append(tempReading, byte(line[i]))
+					if bytes.Contains(_IgnoredSpaces, []byte{byte(line[i])}) && // 9 tab
+						!possibleQuoting {
+						possibleComment = true
+					} else {
+						possibleComment = false
+					}
+					if _FlagQuoting == byte(line[i]) &&
+						len(r.Value) == 0 {
+						endingQuoting = strings.LastIndex(string(line[i:]), string(_FlagQuoting))
+						if endingQuoting != i {
+							possibleQuoting = true
+						}
+					} else if endingQuoting == i {
+						endingQuoting = 0
+						possibleQuoting = false
+					}
+					if capturingValue {
+						r.Value = strings.TrimSpace(string(tempReading))
+					}
 				}
 			}
 		}
