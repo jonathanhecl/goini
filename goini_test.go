@@ -140,14 +140,15 @@ func TestReadFile(t *testing.T) {
 
 func TestSpecial2(t *testing.T) {
 	content := []byte(`[Test]
-change=4 ' comment
-ignore=I'will ignore this
+	change=4 ' comment
+	ignore=I'will ignore this
 
-# preserve this line
+	# preserve this line with spaces
+	same=Never change this	// comment
+	# another comment line
 
-same=Never change this	// comment
-
-# comment test`)
+	# last comment line
+	none=1`)
 	err := os.WriteFile("test2.ini", content, 0644)
 	if err != nil {
 		t.Errorf("Error creating test file: %s", err)

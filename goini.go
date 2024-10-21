@@ -111,9 +111,11 @@ func ReadFile(Path string, EmptyLines bool) ([]string, error) {
 		n, err := f.Read(buf)
 		if n > 0 {
 			for i := 0; i < n; i++ {
-				if buf[i] == 10 ||
-					buf[i] == 13 {
-					if len(line) > 0 || EmptyLines {
+				if buf[i] == 13 {
+					// ignore \r
+					continue
+				} else if buf[i] == 10 {
+					if len(line) > 0 || (EmptyLines && buf[i] == 10) {
 						lines = append(lines, string(line))
 						line = []byte{}
 					}
@@ -156,9 +158,17 @@ func Load(Path string, o *TOptions) (*TINIFile, error) {
 	}
 	if lines, err := ReadFile(Path, !t.options.DontPreserveEmptyLines); err == nil {
 		lineNumber := 0
+		if t.options.Debug {
+			fmt.Println("Total lines: ", len(lines))
+			for i := range lines {
+				fmt.Println("LINE ", i, " -> ", lines[i])
+			}
+		}
+
 		for i := range lines {
 			l := strings.TrimSpace(lines[i])
 			if lineNumber == 0 {
+				fmt.Println("LINE: ", l)
 				t.lines = append(t.lines, t.processLine(l, _TLine{}))
 			} else {
 				t.lines = append(t.lines, t.processLine(l, t.lines[lineNumber-1]))
@@ -210,6 +220,8 @@ func (t *TINIFile) processLine(line string, prevLine _TLine) _TLine {
 	capturingKey := false
 	capturingValue := false
 	tempReading := []byte{}
+
+	fmt.Println("Processing line: ", line, len(line))
 
 	for i := range line {
 		if t.options.Debug {

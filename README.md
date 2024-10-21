@@ -7,7 +7,7 @@
 
 With this package you can create or read INI files, preserving comments and types, very quick & easy.
 
-> coverage: 93.9% of statements
+> coverage: 94.0% of statements
 >
 
 > go get github.com/jonathanhecl/goini
