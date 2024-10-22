@@ -168,7 +168,6 @@ func Load(Path string, o *TOptions) (*TINIFile, error) {
 		for i := range lines {
 			l := strings.TrimSpace(lines[i])
 			if lineNumber == 0 {
-				fmt.Println("LINE: ", l)
 				t.lines = append(t.lines, t.processLine(l, _TLine{}))
 			} else {
 				t.lines = append(t.lines, t.processLine(l, t.lines[lineNumber-1]))
