@@ -50,7 +50,7 @@ func main() {
 
 ## 🛠️ Types supported:
 
-| Type | Description |
+| Type | Notes |
 | --- | --- |
 | Byte | |
 | String | |
@@ -60,6 +60,7 @@ func main() {
 | Int8 | |
 | Int16 | |
 | Int32 | |
+| Int64 | |
 | Uint64 | |
 | Float32 | |
 | Float64 | |
