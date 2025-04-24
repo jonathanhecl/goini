@@ -141,7 +141,7 @@ func TestReadFile(t *testing.T) {
 func TestSpecial2(t *testing.T) {
 	content := []byte(`[Test]
 	change=4 ' comment
-	ignore=I'will ignore this
+	ignore=I'will ignore this ; comment
 
 	# preserve this line with spaces
 	same=Never change this	// comment

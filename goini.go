@@ -45,12 +45,12 @@ type _TSection struct {
 	End     int
 }
 
-var _Section []byte = []byte{91, 93}              // [ ]
-var _ArraySeparator []byte = []byte{44}           // 44 is the ascii code for comma
-var _FlagComments []byte = []byte{35, 39, 47, 96} // 47 double
-var _IgnoredSpaces []byte = []byte{9, 10, 32}     // Bool returns the value as a boolean.
-var _KeyValueDiff byte = byte(61)                 // 61 is the ascii code for =
-var _FlagQuoting byte = byte(34)                  // 34 is the ascii code for "
+var _Section []byte = []byte{91, 93}                  // [ ]
+var _ArraySeparator []byte = []byte{44}               // 44 is the ascii code for comma
+var _FlagComments []byte = []byte{35, 39, 47, 59, 96} // 47 double
+var _IgnoredSpaces []byte = []byte{9, 10, 32}         // Bool returns the value as a boolean.
+var _KeyValueDiff byte = byte(61)                     // 61 is the ascii code for =
+var _FlagQuoting byte = byte(34)                      // 34 is the ascii code for "
 
 type TValue struct {
 	Value []byte
