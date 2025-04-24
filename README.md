@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/jonathanhecl/goini)](https://goreportcard.com/report/github.com/jonathanhecl/goini)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-With this package you can create or read INI files, preserving comments and types, very quick & easy.
+With goini package you can create or read INI files, preserving comments and types, very quickly and easily.
 
 > coverage: 94.0% of statements
 >
@@ -13,15 +13,15 @@ With this package you can create or read INI files, preserving comments and type
 > go get github.com/jonathanhecl/goini
 >
 
-## Features:
+## 🫴 Features:
 
-* Get & Set values.
-* Create sections & keys dynamically.
+* You can get and set values easily.
+* The sections and keys are created dynamically.
 * Preserve all the comments.
-* Preserve empty lines.
-* Works with big & small files.
+* Preserve empty lines and blank lines.
+* Works with big and small files quickly.
 
-## Example:
+## 🔨 Example:
 ```
 package main
 
@@ -39,7 +39,7 @@ func main() {
         ini := goini.New(&goini.TOptions{CaseSensitive: false})
     */
     // Read a key
-	value := ini.Get("section", "key").String())
+	value := ini.Get("section", "key").String()
     // Set a key
 	ini.Set("section", "key", goini.String("test"))
     // Save a file
@@ -48,18 +48,18 @@ func main() {
 }
 ```
 
-## Types supported:
+## 🛠️ Types supported:
 
-* Byte
-* String
-* StringArray _(separated with comma)_
-* Bool _(works with 1/0 and true/false)_
-* Int
-* Int8
-* Int16
-* Int32
-* Uint64
-* Float32
-* Float64
-
-## Updated 21 oct 2024
+| Type | Description |
+| --- | --- |
+| Byte | |
+| String | |
+| StringArray | separated with comma (,) |
+| Bool | works with 1/0 and true/false |
+| Int | |
+| Int8 | |
+| Int16 | |
+| Int32 | |
+| Uint64 | |
+| Float32 | |
+| Float64 | |
